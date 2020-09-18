@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>模拟JSONP跨域请求</title>
+</head>
+<body>
+  <script type="text/javascript">
+    var message = 'hello world';
+    function doSomething(data) {
+      // 处理返回的数据
+      document.write(data);
+    }
+  </script>
+  <script src="http://127.0.0.1:3000/jsonp?callback=doSomething&msg=message"></script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>cors</title>
+  <script src="https://cdn.bootcss.com/axios/0.18.0/axios.min.js"></script>
+</head>
+<body>
+  <script>
+    function request() {
+      axios({
+        method: 'put',
+        url: 'http://127.0.0.1:3000/cors/request',
+        params: {
+          msg: 'hello cors'
+        },
+        headers: {
+            'Content-type': 'application/x-www-form-urlencoded'
+        }
+      }).then((res)=> {
+        document.write(res.data)
+      })
+    }
+    function easyRequest() {
+       axios({
+        method: 'get',
+        url: 'http://127.0.0.1:3000/cors/form-request',
+        params: {
+          msg: 'hello cors'
+        },
+        headers: {
+            'Content-type': 'application/x-www-form-urlencoded'
+        }
+      }).then((res)=> {
+        document.write(res.data)
+      })
+    }
+    setInterval(request, 5000);
+    setTimeout(easyRequest, 3000);
+  </script>
+</body>
+</html>

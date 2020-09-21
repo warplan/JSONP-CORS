@@ -69,6 +69,7 @@ MDN：跨域资源共享(CORS) 是一种机制，它使用额外的 HTTP 头来�
  - GET
  - HEAD
  - POST
+
 HTTP请求头仅限于以下：
  - Accept
  - Accept-Language
@@ -79,6 +80,7 @@ HTTP请求头仅限于以下：
  - Save-Data
  - Viewport-Width
  - Width
+ 
 Content-Type的值仅限于下列三者之一:
  - text/plain
  - multipart/form-data

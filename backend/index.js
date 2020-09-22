@@ -16,18 +16,18 @@ router.get('/jsonp', (ctx, next) => {
 })
 
 // 设置CORS
-// app.use(async (ctx, next) => {
-//   ctx.set('Access-Control-Allow-Origin', '*');
-//   ctx.set('Access-Control-Allow-Methods', 'GET,POST,PUT');
-//   ctx.set('Access-Control-Allow-Headers', 'x-requested-with, Content-Type');
-//   ctx.set('Access-Control-Max-Age', 10);
+app.use(async (ctx, next) => {
+  ctx.set('Access-Control-Allow-Origin', '*');
+  ctx.set('Access-Control-Allow-Methods', 'GET,POST,PUT');
+  ctx.set('Access-Control-Allow-Headers', 'x-requested-with, Content-Type');
+  ctx.set('Access-Control-Max-Age', 10);
 
-//   if (ctx.request.method == 'OPTIONS') {
-//     ctx.body = 200; 
-//   } else {
-//     await next();
-//   }
-// });
+  if (ctx.request.method == 'OPTIONS') {
+    ctx.body = 200; 
+  } else {
+    await next();
+  }
+});
 
 // CORS跨域非简单请求
 router.put('/cors/request', (ctx, next) => {

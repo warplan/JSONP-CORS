@@ -1,9 +1,9 @@
 # 跨域
-本文主要介绍JSONP、CORS两种跨域方式，后端采用Koa模拟后台，真正的目标是理解整个跨域流程的实现。
+本文主要介绍JSONP、CORS两种跨域方式，后台采用Koa模拟，真正的目标是理解整个跨域流程的实现。
 至于什么是跨域和浏览器同源策略的问题，就自行百度吧。
 
 ## JSONP
-JSONP 是一种trick, 利用浏览器对带有src标签的能力实现访问跨域数据的小技巧（像img、link标签等不存在跨域问题）。
+JSONP 其实是一种trick, 利用浏览器对带有src标签的能力实现访问跨域数据的小技巧（像img、link标签等不存在跨域问题）。
 
 前端代码实现：
 ```javascript
@@ -178,7 +178,7 @@ app.listen(3000);
 ```
 ![avatar](https://github.com/warplan/JSONP-CORS/blob/master/images/request.jpg)
 
-我们会发现Request Headers头里面添加了Origin标签, 浏览器会根据后端接口的设置去校验跨域是否生效，不生效的话则会抛错。No 'Access-Control-Allow-Origin' header is present on the requested resource。
+我们会发现Request Headers头里面添加Origin标签。Origin字段用来说明，本次请求来自哪个源（协议 + 域名 + 端口）。服务器会根据这个值，决定是否同意这次请求。 如果Origin指定的源，不在许可范围内，服务器会返回一个正常的HTTP回应。浏览器发现，这个回应的头信息没有包含Access-Control-Allow-Origin字段就知道出错了，从而抛出一个错误，被XMLHttpRequest的onerror回调函数捕获。（注意，这种错误无法通过状态码识别，因为HTTP回应的状态码有可能是200。）
 
 ### 非简单请求
 
@@ -212,18 +212,58 @@ app.listen(3000);
 </body>
 </html>
 ```
-我们会发现多了一次OPTIONS请求，这个就是我们所说的预检功能。浏览器会询问服务器，当前网页所在的域名是否在服务器的许可名单之中，以及可以使用哪些HTTP动词和头信息字段。只有得到了肯定答复，浏览器才会发出正式的XMLHttpRequest请求，否则就报错。
+```javascript
+var Koa = require('koa');
+var Router = require('koa-router');
+ 
+var app = new Koa();
+var router = new Router();
+
+// 设置CORS
+app.use(async (ctx, next) => {
+  ctx.set('Access-Control-Allow-Origin', '*');
+  ctx.set('Access-Control-Allow-Methods', 'GET,POST,PUT');
+  ctx.set('Access-Control-Allow-Headers', 'x-requested-with, Content-Type');
+  ctx.set('Access-Control-Max-Age', 10);
+
+  if (ctx.request.method == 'OPTIONS') {
+    ctx.body = 200; 
+  } else {
+    await next();
+  }
+});
+
+// CORS跨域非简单请求
+router.put('/cors/request', (ctx, next) => {
+  ctx.body = "Hello world!";
+});
+
+app
+  .use(router.routes())
+  .use(router.allowedMethods());
+
+app.listen(3000);
+```
+我们会发现多了一次OPTIONS请求，这个就是我们所说的预检请求。浏览器会询问服务器，当前网页所在的域名是否在服务器的许可名单之中，以及可以使用哪些HTTP动词和头信息字段。只有得到了肯定答复，浏览器才会发出正式的XMLHttpRequest请求，否则就报错。
 
 如果Origin指定的域名在许可范围内，服务器返回的响应，会多出几个头信息字段。
 - Access-Control-Allow-Headers: 首部字段用于预检请求的响应。其指明了实际请求中允许携带的首部字段。
 - Access-Control-Allow-Methods: 首部字段用于预检请求的响应。其指明了实际请求所允许使用的 HTTP 方法。
 - Access-Control-Allow-Origin: 参数的值指定了允许访问该资源的外域 URI
 
-一旦服务器通过了"预检"请求，以后每次浏览器正常的CORS请求，就都跟简单请求一样，会有一个Origin头信息字段。我们可以通过设置Access-Control-Max-Age来控制"预检"请求的时效性。
+一旦服务器通过了"预检"请求，以后每次浏览器正常的CORS请求，就都跟简单请求一样，会有一个Origin头信息字段。我们还可以通过设置Access-Control-Max-Age来控制"预检"请求的时效性。
 
 ![avatar](https://github.com/warplan/JSONP-CORS/blob/master/images/Options.jpg)
 
 
- 浏览器为什么要区分简单请求和非简单请求呢？
- - 服务器端无法区分
+ 至此跨域的实践就全部结束了，我们思考一下浏览器为什么要区分简单请求和非简单请求呢，按照实际的情况，不是区分原生表单请求和非原生表单请求不是更好吗？
+ 我们来看一下贺师俊老师是怎么解释的：
+
+ > 预检这机制只能限于非简单请求。在处理简单请求的时候，如果服务器不打算接受跨源请求，不能依赖 CORS-preflight 机制。因为不通过 CORS，普通表单也能发起简单请求，所以默认禁止跨源是做不到的。
+既然如此，简单请求发 preflight 就没有意义了，就算发了服务器也省不了后续每次的计算，反而在一开始多了一次 preflight。
+有些人把简单请求不需要 preflight 理解为『向下兼容』。这也不能说错。但严格来说，并不是『为了向下兼容』而不能发。理论上浏览器可以区别对待表单请求和非表单请求 —— 对传统的跨源表单提交不发 preflight，从而保持兼容，只对非表单跨源请求发 preflight。
+但这样做并没有什么好处，反而把事情搞复杂了。比如本来你可以直接用脚本发跨源普通请求，尽管（在服务器默认没有跨源处理的情况下）你无法得到响应结果，但是你的需求可能只是发送无需返回，比如打个日志。但现在如果服务器不理解 preflight 你就干不了这个事情了。
+而且如果真的这样做，服务器就变成了默认允许跨源表单，如果想控制跨源，还是得（跟原本一样）直接在响应处理中执行跨源计算逻辑；另一方面服务器又需要增加对 preflight 请求的响应支持，执行类似的跨源计算逻辑以控制来自非表单的相同跨源请求。服务器通常没有区分表单/非表单差异的需求，这样搞纯粹是折腾服务器端工程师。
+所以简单请求不发 preflight 不是因为不能兼容，而是因为兼容的前提下发 preflight 对绝大多数服务器应用来说没有意义，反而把问题搞复杂了。
+ 
 
